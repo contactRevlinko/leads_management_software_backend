@@ -1,18 +1,15 @@
-    // main entry point
-    require('dotenv').config();
-    const express = require('express');
-    const app = express();
-    const cors = require('cors');
-    const mongoose = require('mongoose')
-    const PORT = process.env.PORT || 5000   
+require("dotenv").config();
 
-    //middleware
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
 
-    app.use(cors());
-    app.use(express.json());
+const app = express();
 
+const PORT = process.env.PORT || 5000;
 
-    app.use(
+// middleware
+app.use(
   cors({
     origin: [
       "http://localhost:5173",
@@ -22,16 +19,19 @@
   })
 );
 
-    //routes
+app.use(express.json());
 
-    app.use('/api/leads', require('./routes/leads.js'));
-    app.use('/api/followups', require('./routes/followups.js'));
-    app.use('/api/auth' , require('./routes/auth.js'));
-    //mongoDb connection
-    mongoose.connect(process.env.MONGO_URL)
-    .then(() => console.log("mongodb connected successfully"))
-    .catch(err => console.log("error" , err));
+// routes
+app.use("/api/leads", require("./routes/leads.js"));
+app.use("/api/followups", require("./routes/followups.js"));
+app.use("/api/auth", require("./routes/auth.js"));
 
-    app.listen(PORT , () =>{
-        console.log(`server running on port ${PORT}`);
-    });
+// mongodb connection
+mongoose
+  .connect(process.env.MONGO_URL)
+  .then(() => console.log("mongodb connected successfully"))
+  .catch((err) => console.log("error", err));
+
+app.listen(PORT, () => {
+  console.log(`server running on port ${PORT}`);
+});
