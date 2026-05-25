@@ -211,7 +211,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-    router.post("/count",verifyUserToken, async (req, res) => {
+router.post("/count",verifyUserToken, async (req, res) => {
   try {
     const totalLead = await Lead.countDocuments({userId : req.user.id});
     res.status(200).json({
@@ -351,4 +351,5 @@ router.patch('/:id/status' , async (req , res) => {
   }
 
 })
+
 module.exports = router;
