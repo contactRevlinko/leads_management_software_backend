@@ -1,43 +1,43 @@
-    // main entry point
-    require('dotenv').config();
-    const express = require('express');
-    const app = express();
-    const cors = require('cors');
-    const mongoose = require('mongoose')
-    const PORT = process.env.PORT || 5000   
+require('dotenv').config();
+const express = require('express');
+const app = express();
+const mongoose = require('mongoose');
+const PORT = process.env.PORT || 5000;
+
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  process.env.FRONTEND_URL, // your deployed Vercel frontend URL
+  process.env.FRONTEND_URL,
 ].filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS blocked: ${origin}`));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+// ✅ Manual CORS — no cors package, no path-to-regexp crash
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+  }
 
-app.options("*", cors()); // ← must be BEFORE routes
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
-    //routes
+app.use(express.json());
 
-    app.use('/api/leads', require('./routes/leads.js'));
-    app.use('/api/followups', require('./routes/followups.js'));
-    app.use('/api/auth' , require('./routes/auth.js'));
-    //mongoDb connection
-    mongoose.connect(process.env.MONGO_URL)
-    .then(() => console.log("mongodb connected successfully"))
-    .catch(err => console.log("error" , err));
+// routes
+app.use('/api/leads', require('./routes/leads.js'));
+app.use('/api/followups', require('./routes/followups.js'));
+app.use('/api/auth', require('./routes/auth.js'));
 
-    app.listen(PORT , () =>{
-        console.log(`server running on port ${PORT}`);
-    });
+// mongodb
+mongoose.connect(process.env.MONGO_URL)
+  .then(() => console.log("mongodb connected successfully"))
+  .catch(err => console.log("error", err));
+
+app.listen(PORT, () => {
+  console.log(`server running on port ${PORT}`);
+});
