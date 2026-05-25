@@ -5,7 +5,7 @@ const Followup = require("../models/followupmodel");
 const verifyUserToken = require("../middleware/auth")
 
 
-router.post("/", verifyUserToken, async (req, res) => {
+router.post("/creat-followups", verifyUserToken, async (req, res) => {
   try {
     console.log(req.body, "req.body");
     const {
@@ -48,7 +48,7 @@ router.post("/", verifyUserToken, async (req, res) => {
   }
 });
 
-router.get("/",verifyUserToken, async (req, res) => {
+router.post("/get-followups",verifyUserToken, async (req, res) => {
   try {
     const allFollowups = await Followup.find({userId : req.user.id})
       .populate("leadId")

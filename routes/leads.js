@@ -10,7 +10,7 @@ const verifyUserToken = require("../middleware/auth");
 
 
 
-router.post("/", verifyUserToken, async (req, res) => {
+router.post("/create-lead", verifyUserToken, async (req, res) => {
   try {
     console.log("REQ USER:", req.user);
     console.log("REQ BODY:", req.body);
@@ -41,7 +41,7 @@ router.post("/", verifyUserToken, async (req, res) => {
   }
 });
 
-router.get("/", verifyUserToken  , async (req, res) => {
+router.post("/get-leads", verifyUserToken  , async (req, res) => {
   try {
     const leads = await Lead.find({userId: req.user.id }).sort({ createdAt: -1 });
     res.status(200).json({
@@ -56,6 +56,7 @@ router.get("/", verifyUserToken  , async (req, res) => {
     });
   }
 });
+
 router.put("/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -210,9 +211,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-router.get("/count", async (req, res) => {
+    router.post("/count",verifyUserToken, async (req, res) => {
   try {
-    const totalLead = await Lead.countDocuments();
+    const totalLead = await Lead.countDocuments({userId : req.user.id});
     res.status(200).json({
       success: true,
       message: "lead count successfully",
@@ -228,9 +229,10 @@ router.get("/count", async (req, res) => {
   }
 });
 
-router.get("/new", async (req, res) => {
+router.post("/new",verifyUserToken, async (req, res) => {
   try {
     const newStatus = await Lead.countDocuments({
+    userId : req.user.id,
       status: "New",
     });
     res.status(200).json({
@@ -248,9 +250,10 @@ router.get("/new", async (req, res) => {
   }
 });
 
-router.get("/interested", async (req, res) => {
+router.post("/interested", verifyUserToken,async (req, res) => {
   try {
     const interested = await Lead.countDocuments({
+       userId : req.user.id,
       status: "Interested",
     });
     res.status(200).json({
@@ -267,9 +270,10 @@ router.get("/interested", async (req, res) => {
   }
 });
 
-router.get("/contacted", async (req, res) => {
+router.post("/contacted",verifyUserToken, async (req, res) => {
   try {
     const contacted = await Lead.countDocuments({
+       userId : req.user.id,
       status: "Contacted",
     });
     res.status(200).json({
@@ -286,9 +290,10 @@ router.get("/contacted", async (req, res) => {
   }
 });
 
-router.get("/won", async (req, res) => {
+router.post("/won",verifyUserToken ,async (req, res) => {
   try {
     const won = await Lead.countDocuments({
+       userId : req.user.id,
       status: "Closed Won",
     });
     res.status(200).json({
@@ -305,9 +310,10 @@ router.get("/won", async (req, res) => {
   }
 });
 
-router.get("/lost", async (req, res) => {
+router.post("/lost",verifyUserToken, async (req, res) => {
   try {
     const lost = await Lead.countDocuments({
+       userId : req.user.id,
       status: "Closed Lost",
     });
     res.status(200).json({
