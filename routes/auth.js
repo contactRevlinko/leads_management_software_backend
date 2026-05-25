@@ -96,10 +96,19 @@ router.post("/login" , async(req , res) => {
 })
 
 router.get("/profile", verifyUserToken, (req, res) => {
-  res.json({
+    
+  try{
+    res.json({
     success: true,
     user: req.user,
   });
-});
+  }catch(err){
+    console.log(err)
+     res.status(500).json({
+      success:false,
+      message: err.message
+   })
+  }
+})
 
 module.exports = router;
