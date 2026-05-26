@@ -39,9 +39,11 @@ router.post("/create-lead", verifyUserToken, async (req, res) => {
   }
 });
 
-router.post("/get-leads", verifyUserToken  , async (req, res) => {
+router.post("/get-leads", verifyUserToken, async (req, res) => {
   try {
-    const leads = await Lead.find({userId: req.user.id }).sort({ createdAt: -1 });
+    const leads = await Lead.find({ userId: req.user.id }).sort({
+      createdAt: -1,
+    });
     res.status(200).json({
       success: true,
       message: "get all leads successfully",
@@ -118,14 +120,21 @@ router.get("/reminders/today", async (req, res) => {
   }
 });
 
-
-router.get("/analytics",verifyUserToken, async (req, res) => {
+router.get("/analytics", verifyUserToken, async (req, res) => {
   try {
     const byStatus = await Lead.aggregate([
-      { $group: { _id: "$status", count: { $sum: 1 } } },
-    ] , {userId: req.user.id });
+      {
+        $match: {
+          userId: req.user.id,
+        },
+      },
 
-    const total = await Lead.countDocuments();
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+
+    const total = await Lead.countDocuments({
+      userId : req.user.id,
+    });
 
     res.status(200).json({
       success: true,
@@ -141,10 +150,6 @@ router.get("/analytics",verifyUserToken, async (req, res) => {
     });
   }
 });
-
-
-
-
 
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
@@ -190,15 +195,15 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       return !duplicate;
     });
 
-    if(newLead.length < 1){
+    if (newLead.length < 1) {
       return res.json({
-        message : "same data already exist . no new lead  uploaded"
-      })
+        message: "same data already exist . no new lead  uploaded",
+      });
     }
- const duplicateCount = leads.length - newLead.length
- const leadData = await Lead.insertMany(newLead); 
-   
- res.status(200).json({
+    const duplicateCount = leads.length - newLead.length;
+    const leadData = await Lead.insertMany(newLead);
+
+    res.status(200).json({
       success: true,
       message: `${leadData.length} leads uploaded ${duplicateCount} duplicate lead skipped `,
       data: leadData,
@@ -213,9 +218,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-router.post("/count",verifyUserToken, async (req, res) => {
+router.post("/count", verifyUserToken, async (req, res) => {
   try {
-    const totalLead = await Lead.countDocuments({userId : req.user.id});
+    const totalLead = await Lead.countDocuments({ userId: req.user.id });
     res.status(200).json({
       success: true,
       message: "lead count successfully",
@@ -231,10 +236,10 @@ router.post("/count",verifyUserToken, async (req, res) => {
   }
 });
 
-router.post("/new",verifyUserToken, async (req, res) => {
+router.post("/new", verifyUserToken, async (req, res) => {
   try {
     const newStatus = await Lead.countDocuments({
-    userId : req.user.id,
+      userId: req.user.id,
       status: "New",
     });
     res.status(200).json({
@@ -252,10 +257,10 @@ router.post("/new",verifyUserToken, async (req, res) => {
   }
 });
 
-router.post("/interested", verifyUserToken,async (req, res) => {
+router.post("/interested", verifyUserToken, async (req, res) => {
   try {
     const interested = await Lead.countDocuments({
-       userId : req.user.id,
+      userId: req.user.id,
       status: "Interested",
     });
     res.status(200).json({
@@ -272,10 +277,10 @@ router.post("/interested", verifyUserToken,async (req, res) => {
   }
 });
 
-router.post("/contacted",verifyUserToken, async (req, res) => {
+router.post("/contacted", verifyUserToken, async (req, res) => {
   try {
     const contacted = await Lead.countDocuments({
-       userId : req.user.id,
+      userId: req.user.id,
       status: "Contacted",
     });
     res.status(200).json({
@@ -292,10 +297,10 @@ router.post("/contacted",verifyUserToken, async (req, res) => {
   }
 });
 
-router.post("/won",verifyUserToken ,async (req, res) => {
+router.post("/won", verifyUserToken, async (req, res) => {
   try {
     const won = await Lead.countDocuments({
-       userId : req.user.id,
+      userId: req.user.id,
       status: "Closed Won",
     });
     res.status(200).json({
@@ -312,10 +317,10 @@ router.post("/won",verifyUserToken ,async (req, res) => {
   }
 });
 
-router.post("/lost",verifyUserToken, async (req, res) => {
+router.post("/lost", verifyUserToken, async (req, res) => {
   try {
     const lost = await Lead.countDocuments({
-       userId : req.user.id,
+      userId: req.user.id,
       status: "Closed Lost",
     });
     res.status(200).json({
@@ -333,25 +338,27 @@ router.post("/lost",verifyUserToken, async (req, res) => {
   }
 });
 
-router.patch('/:id/status' , async (req , res) => {
-  try{
-    const {status } = req.body;
-    const updatedLeadStatus = await Lead.findByIdAndUpdate(req.params.id , {status} , {new : true});
+router.patch("/:id/status", async (req, res) => {
+  try {
+    const { status } = req.body;
+    const updatedLeadStatus = await Lead.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true },
+    );
     res.status(201).json({
-      success :true ,
-      message : "lead status updated successfully",
-      data:updatedLeadStatus
-    })
-
-  }catch(err){
+      success: true,
+      message: "lead status updated successfully",
+      data: updatedLeadStatus,
+    });
+  } catch (err) {
     console.log(err);
     res.status(500).json({
-      success : false ,
-      message : "server error",
-      err : err.message 
-    })
+      success: false,
+      message: "server error",
+      err: err.message,
+    });
   }
-
-})
+});
 
 module.exports = router;
