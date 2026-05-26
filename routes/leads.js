@@ -121,40 +121,6 @@ router.get("/reminders/today", async (req, res) => {
   }
 });
 
-// router.get("/analytics", verifyUserToken, async (req, res) => {
-//   try {
-//     const userObjectId = new mongoose.Types.ObjectId(req.user.id);
-//     const byStatus = await Lead.aggregate([
-//       {
-//         $match: {
-//           userId:userObjectId,
-//         },
-//       },
-
-//       { $group: { _id: "$status", count: { $sum: 1 } } },
-//     ]);
-
-//     const total = await Lead.countDocuments({
-//       userId : userObjectId,
-//     });
-
-//     res.status(200).json({
-//       success: true,
-//       byStatus,
-//       total,
-//     });
-//     console.log(total , "total lead" , byStatus , "byStatus");
-//   } catch (err) {
-//     console.log("Analytics error:", err);
-//     res.status(500).json({
-//       success: false,
-//       message: err.message,
-//     });
-//   }
-// });
-
-
-
 router.get("/analytics", verifyUserToken, async (req, res) => {
   try {
       console.log("ANALYTICS API HIT");
