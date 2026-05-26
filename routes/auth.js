@@ -10,7 +10,7 @@ const verifyUserToken = require("../middleware/auth")
 
 router.post("/register" , async (req, res) =>{
     try{
-        const {name , phone, email , password} = req.body;
+        const {name , phone, email ,   businessType, password } = req.body;
         const existingUser = await User.findOne({email});
         console.log("existingUser" , existingUser);
         if(existingUser){
@@ -24,6 +24,7 @@ const hashPassword = await bcrypt.hash(password , 10)
             name , 
             phone,
             email,
+              businessType,
             password:hashPassword
         })
         res.status(201).json({
@@ -31,7 +32,7 @@ const hashPassword = await bcrypt.hash(password , 10)
             message:"user created successfully",
             data : user,
         })
-console.log(user);
+console.log(user , "user");
    console.log(password , hashPassword);
 
     }
@@ -48,7 +49,7 @@ console.log(user);
 
 router.post("/login" , async(req , res) => {
     try{
-        const {email , password} = req.body;
+        const {name , email , phone, password , businessType } = req.body;
         const existingUser = await User.findOne({email})
         if(!existingUser){
           return res.status(401).json({
@@ -69,7 +70,10 @@ router.post("/login" , async(req , res) => {
 
         const token = jwt.sign({
             id : existingUser._id,
+             name: existingUser.name,
             email : existingUser.email,
+              phone: existingUser.phone,
+               businessType: existingUser.businessType,
         } , process.env.JWT_SECRET,{expiresIn : "365d"})
      console.log("token",token )
          console.log(User);
@@ -77,11 +81,13 @@ router.post("/login" , async(req , res) => {
         success : true ,
         message:"user loggedin successfully",
         token : token ,
-        user:{
-             id: existingUser._id,
-                name: existingUser.name,
-                email: existingUser.email
-        }
+        user: {
+  id: existingUser._id,
+  name: existingUser.name,
+  email: existingUser.email,
+  phone: existingUser.phone,
+  businessType: existingUser.businessType,
+}
      })
  
     }
