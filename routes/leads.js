@@ -352,57 +352,30 @@
 
 // module.exports = router;
 
+
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const XLSX = require("xlsx");
-const mongoose = require("mongoose");
 
 const Lead = require("../models/leadmodel");
 const verifyUserToken = require("../middleware/auth");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const logStart = (apiName, req) => {
-  console.log(`\n========== ${apiName} START ==========`);
-  console.log("METHOD:", req.method);
-  console.log("URL:", req.originalUrl);
-  console.log("PARAMS:", req.params);
-  console.log("BODY:", req.body);
-  console.log("USER:", req.user);
-  console.log("AUTH HEADER EXISTS:", !!req.headers.authorization);
-};
-
-const logError = (apiName, err) => {
-  console.log(`========== ${apiName} ERROR ==========`);
-  console.log("MESSAGE:", err.message);
-  console.log("STACK:", err.stack);
-};
-
 const getUserId = (req) => req.user?.id || req.user?._id;
-
-const requireUserId = (req, res) => {
-  const userId = getUserId(req);
-
-  if (!userId) {
-    res.status(401).json({
-      success: false,
-      message: "Unauthorized: user not found from token",
-    });
-    return null;
-  }
-
-  return userId;
-};
 
 // CREATE LEAD
 router.post("/create-lead", verifyUserToken, async (req, res) => {
-  const apiName = "CREATE LEAD";
   try {
-    logStart(apiName, req);
+    const userId = getUserId(req);
 
-    const userId = requireUserId(req, res);
-    if (!userId) return;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: user not found from token",
+      });
+    }
 
     const { name, email, phone, status, notes, followUpDate } = req.body;
 
@@ -416,15 +389,13 @@ router.post("/create-lead", verifyUserToken, async (req, res) => {
       followUpDate: followUpDate || null,
     });
 
-    console.log("CREATED LEAD:", lead);
-
     res.status(201).json({
       success: true,
       message: "Lead created successfully",
       data: lead,
     });
   } catch (err) {
-    logError(apiName, err);
+    console.log("CREATE LEAD ERROR:", err);
     res.status(500).json({
       success: false,
       message: err.message,
@@ -434,16 +405,10 @@ router.post("/create-lead", verifyUserToken, async (req, res) => {
 
 // GET USER LEADS
 router.post("/get-leads", verifyUserToken, async (req, res) => {
-  const apiName = "GET LEADS";
   try {
-    logStart(apiName, req);
-
-    const userId = requireUserId(req, res);
-    if (!userId) return;
+    const userId = getUserId(req);
 
     const leads = await Lead.find({ userId }).sort({ createdAt: -1 });
-
-    console.log("TOTAL LEADS FOUND:", leads.length);
 
     res.status(200).json({
       success: true,
@@ -451,7 +416,7 @@ router.post("/get-leads", verifyUserToken, async (req, res) => {
       data: leads || [],
     });
   } catch (err) {
-    logError(apiName, err);
+    console.log("GET LEADS ERROR:", err);
     res.status(500).json({
       success: false,
       message: err.message,
@@ -462,20 +427,14 @@ router.post("/get-leads", verifyUserToken, async (req, res) => {
 
 // UPDATE LEAD
 router.put("/:id", verifyUserToken, async (req, res) => {
-  const apiName = "UPDATE LEAD";
   try {
-    logStart(apiName, req);
-
-    const userId = requireUserId(req, res);
-    if (!userId) return;
+    const userId = getUserId(req);
 
     const updatedLead = await Lead.findOneAndUpdate(
       { _id: req.params.id, userId },
       req.body,
       { new: true }
     );
-
-    console.log("UPDATED LEAD:", updatedLead);
 
     if (!updatedLead) {
       return res.status(404).json({
@@ -490,7 +449,7 @@ router.put("/:id", verifyUserToken, async (req, res) => {
       data: updatedLead,
     });
   } catch (err) {
-    logError(apiName, err);
+    console.log("UPDATE LEAD ERROR:", err);
     res.status(500).json({
       success: false,
       message: err.message,
@@ -500,19 +459,13 @@ router.put("/:id", verifyUserToken, async (req, res) => {
 
 // DELETE LEAD
 router.delete("/:id", verifyUserToken, async (req, res) => {
-  const apiName = "DELETE LEAD";
   try {
-    logStart(apiName, req);
-
-    const userId = requireUserId(req, res);
-    if (!userId) return;
+    const userId = getUserId(req);
 
     const deletedLead = await Lead.findOneAndDelete({
       _id: req.params.id,
       userId,
     });
-
-    console.log("DELETED LEAD:", deletedLead);
 
     if (!deletedLead) {
       return res.status(404).json({
@@ -526,7 +479,7 @@ router.delete("/:id", verifyUserToken, async (req, res) => {
       message: "Lead deleted successfully",
     });
   } catch (err) {
-    logError(apiName, err);
+    console.log("DELETE LEAD ERROR:", err);
     res.status(500).json({
       success: false,
       message: err.message,
@@ -536,12 +489,8 @@ router.delete("/:id", verifyUserToken, async (req, res) => {
 
 // TODAY REMINDERS
 router.get("/reminders/today", verifyUserToken, async (req, res) => {
-  const apiName = "TODAY REMINDERS";
   try {
-    logStart(apiName, req);
-
-    const userId = requireUserId(req, res);
-    if (!userId) return;
+    const userId = getUserId(req);
 
     const today = new Date();
     today.setHours(23, 59, 59, 999);
@@ -552,15 +501,13 @@ router.get("/reminders/today", verifyUserToken, async (req, res) => {
       status: { $nin: ["Closed Won", "Closed Lost"] },
     }).sort({ followUpDate: 1 });
 
-    console.log("TODAY REMINDERS COUNT:", leads.length);
-
     res.status(200).json({
       success: true,
       message: "Today reminders fetched successfully",
       data: leads || [],
     });
   } catch (err) {
-    logError(apiName, err);
+    console.log("TODAY REMINDER ERROR:", err);
     res.status(500).json({
       success: false,
       message: err.message,
@@ -571,24 +518,15 @@ router.get("/reminders/today", verifyUserToken, async (req, res) => {
 
 // ANALYTICS
 router.get("/analytics/summary", verifyUserToken, async (req, res) => {
-  const apiName = "ANALYTICS SUMMARY";
   try {
-    logStart(apiName, req);
-
-    const userId = requireUserId(req, res);
-    if (!userId) return;
-
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const userId = getUserId(req);
 
     const byStatus = await Lead.aggregate([
-      { $match: { userId: userObjectId } },
+      { $match: { userId: new Lead.base.Types.ObjectId(userId) } },
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
     const total = await Lead.countDocuments({ userId });
-
-    console.log("ANALYTICS TOTAL:", total);
-    console.log("ANALYTICS BY STATUS:", byStatus);
 
     res.status(200).json({
       success: true,
@@ -596,7 +534,7 @@ router.get("/analytics/summary", verifyUserToken, async (req, res) => {
       total: total || 0,
     });
   } catch (err) {
-    logError(apiName, err);
+    console.log("ANALYTICS ERROR:", err);
     res.status(500).json({
       success: false,
       message: err.message,
@@ -608,14 +546,8 @@ router.get("/analytics/summary", verifyUserToken, async (req, res) => {
 
 // UPLOAD EXCEL
 router.post("/upload", verifyUserToken, upload.single("file"), async (req, res) => {
-  const apiName = "UPLOAD EXCEL";
   try {
-    logStart(apiName, req);
-
-    const userId = requireUserId(req, res);
-    if (!userId) return;
-
-    console.log("FILE:", req.file);
+    const userId = getUserId(req);
 
     if (!req.file) {
       return res.status(400).json({
@@ -627,9 +559,6 @@ router.post("/upload", verifyUserToken, upload.single("file"), async (req, res) 
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-
-    console.log("SHEET NAME:", sheetName);
-    console.log("TOTAL EXCEL ROWS:", sheetData.length);
 
     const leads = sheetData.map((row) => ({
       userId,
@@ -651,15 +580,11 @@ router.post("/upload", verifyUserToken, upload.single("file"), async (req, res) 
       $or: [{ phone: { $in: phones } }, { email: { $in: emails } }],
     });
 
-    console.log("EXISTING DUPLICATES:", existingLeads.length);
-
     const newLeads = leads.filter((lead) => {
       return !existingLeads.some(
         (item) => item.phone === lead.phone || item.email === lead.email
       );
     });
-
-    console.log("NEW LEADS TO INSERT:", newLeads.length);
 
     if (newLeads.length < 1) {
       return res.status(200).json({
@@ -678,82 +603,142 @@ router.post("/upload", verifyUserToken, upload.single("file"), async (req, res) 
       data: leadData,
     });
   } catch (err) {
-    logError(apiName, err);
+    console.log("UPLOAD ERROR:", err);
     res.status(500).json({
       success: false,
       message: err.message,
     });
   }
 });
-
-// COUNT HELPERS
-const countByStatus = async (req, res, statusValue, responseKey, apiName) => {
-  try {
-    logStart(apiName, req);
-
-    const userId = requireUserId(req, res);
-    if (!userId) return;
-
-    const filter = { userId };
-
-    if (statusValue) {
-      filter.status = statusValue;
-    }
-
-    console.log("COUNT FILTER:", filter);
-
-    const count = await Lead.countDocuments(filter);
-
-    console.log(`${apiName} COUNT:`, count);
-
-    res.status(200).json({
-      success: true,
-      [responseKey]: count || 0,
-    });
-  } catch (err) {
-    logError(apiName, err);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-      [responseKey]: 0,
-    });
-  }
-};
 
 // COUNTS
 router.post("/count", verifyUserToken, async (req, res) => {
-  return countByStatus(req, res, null, "totalLead", "TOTAL COUNT");
+  try {
+    const totalLead = await Lead.countDocuments({ userId: getUserId(req) });
+
+    res.status(200).json({
+      success: true,
+      totalLead,
+    });
+  } catch (err) {
+    console.log("COUNT ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+      totalLead: 0,
+    });
+  }
 });
 
 router.post("/new", verifyUserToken, async (req, res) => {
-  return countByStatus(req, res, "New", "newStatus", "NEW STATUS COUNT");
+  try {
+    const newStatus = await Lead.countDocuments({
+      userId: getUserId(req),
+      status: "New",
+    });
+
+    res.status(200).json({
+      success: true,
+      newStatus,
+    });
+  } catch (err) {
+    console.log("NEW STATUS ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+      newStatus: 0,
+    });
+  }
 });
 
 router.post("/interested", verifyUserToken, async (req, res) => {
-  return countByStatus(req, res, "Interested", "interested", "INTERESTED COUNT");
+  try {
+    const interested = await Lead.countDocuments({
+      userId: getUserId(req),
+      status: "Interested",
+    });
+
+    res.status(200).json({
+      success: true,
+      interested,
+    });
+  } catch (err) {
+    console.log("INTERESTED ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+      interested: 0,
+    });
+  }
 });
 
 router.post("/contacted", verifyUserToken, async (req, res) => {
-  return countByStatus(req, res, "Contacted", "contacted", "CONTACTED COUNT");
+  try {
+    const contacted = await Lead.countDocuments({
+      userId: getUserId(req),
+      status: "Contacted",
+    });
+
+    res.status(200).json({
+      success: true,
+      contacted,
+    });
+  } catch (err) {
+    console.log("CONTACTED ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+      contacted: 0,
+    });
+  }
 });
 
 router.post("/won", verifyUserToken, async (req, res) => {
-  return countByStatus(req, res, "Closed Won", "won", "WON COUNT");
+  try {
+    const won = await Lead.countDocuments({
+      userId: getUserId(req),
+      status: "Closed Won",
+    });
+
+    res.status(200).json({
+      success: true,
+      won,
+    });
+  } catch (err) {
+    console.log("WON ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+      won: 0,
+    });
+  }
 });
 
 router.post("/lost", verifyUserToken, async (req, res) => {
-  return countByStatus(req, res, "Closed Lost", "lost", "LOST COUNT");
+  try {
+    const lost = await Lead.countDocuments({
+      userId: getUserId(req),
+      status: "Closed Lost",
+    });
+
+    res.status(200).json({
+      success: true,
+      lost,
+    });
+  } catch (err) {
+    console.log("LOST ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+      lost: 0,
+    });
+  }
 });
 
 // UPDATE STATUS
 router.patch("/:id/status", verifyUserToken, async (req, res) => {
-  const apiName = "UPDATE STATUS";
   try {
-    logStart(apiName, req);
-
-    const userId = requireUserId(req, res);
-    if (!userId) return;
-
+    const userId = getUserId(req);
     const { status } = req.body;
 
     const updatedLeadStatus = await Lead.findOneAndUpdate(
@@ -761,8 +746,6 @@ router.patch("/:id/status", verifyUserToken, async (req, res) => {
       { status },
       { new: true }
     );
-
-    console.log("UPDATED STATUS RESULT:", updatedLeadStatus);
 
     if (!updatedLeadStatus) {
       return res.status(404).json({
@@ -777,7 +760,7 @@ router.patch("/:id/status", verifyUserToken, async (req, res) => {
       data: updatedLeadStatus,
     });
   } catch (err) {
-    logError(apiName, err);
+    console.log("STATUS UPDATE ERROR:", err);
     res.status(500).json({
       success: false,
       message: err.message,

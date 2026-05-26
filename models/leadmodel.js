@@ -25,6 +25,6 @@ const leadSchema = new mongoose.Schema({
     notes: { type: String },
     assignedTo: { type: String },
   },
-  { timestamaps: true }, // createdAt and updatedAt document
+{ timestamps: true } // createdAt and updatedAt document
 );
 module.exports = mongoose.model("Lead", leadSchema);
