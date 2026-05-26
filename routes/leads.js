@@ -16,6 +16,7 @@ router.post("/create-lead", verifyUserToken, async (req, res) => {
     const { name, email, phone, status, notes, followUpDate } = req.body;
 
     const lead = await Lead.create({
+        ...req.body,
       userId: req.user.id,
       name,
       email,
@@ -120,36 +121,68 @@ router.get("/reminders/today", async (req, res) => {
   }
 });
 
+// router.get("/analytics", verifyUserToken, async (req, res) => {
+//   try {
+//     const userObjectId = new mongoose.Types.ObjectId(req.user.id);
+//     const byStatus = await Lead.aggregate([
+//       {
+//         $match: {
+//           userId:userObjectId,
+//         },
+//       },
+
+//       { $group: { _id: "$status", count: { $sum: 1 } } },
+//     ]);
+
+//     const total = await Lead.countDocuments({
+//       userId : userObjectId,
+//     });
+
+//     res.status(200).json({
+//       success: true,
+//       byStatus,
+//       total,
+//     });
+//     console.log(total , "total lead" , byStatus , "byStatus");
+//   } catch (err) {
+//     console.log("Analytics error:", err);
+//     res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   }
+// });
+
+
+
 router.get("/analytics", verifyUserToken, async (req, res) => {
   try {
-    const byStatus = await Lead.aggregate([
-      {
-        $match: {
-          userId: req.user.id,
-        },
-      },
+      console.log("ANALYTICS API HIT");
+    const leads = await Lead.find({ userId: req.user.id });
 
+    console.log("LOGIN USER:", req.user.id);
+    console.log("MATCHED LEADS:", leads);
+    
+
+
+    const byStatus = await Lead.aggregate([
+      { $match: { userId: leads[0]?.userId } },
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
-    const total = await Lead.countDocuments({
-      userId : req.user.id,
-    });
-
-    res.status(200).json({
+    const total = leads.length;
+ 
+    res.json({
       success: true,
       byStatus,
       total,
     });
-    console.log(total);
   } catch (err) {
-    console.log("Analytics error:", err);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
+
+
 
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
