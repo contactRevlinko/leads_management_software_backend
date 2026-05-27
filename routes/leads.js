@@ -13,15 +13,17 @@ router.post("/create-lead", verifyUserToken, async (req, res) => {
     console.log("REQ USER:", req.user);
     console.log("REQ BODY:", req.body);
 
-    const { name, email, phone, status, notes, followUpDate } = req.body;
+    const { name, email, phone, status, source, notes, followUpDate } =
+      req.body;
 
     const lead = await Lead.create({
-        ...req.body,
+      ...req.body,
       userId: req.user.id,
       name,
       email,
       phone,
       status,
+      source,
       notes,
       followUpDate,
     });
@@ -123,13 +125,11 @@ router.get("/reminders/today", async (req, res) => {
 
 router.get("/analytics", verifyUserToken, async (req, res) => {
   try {
-      console.log("ANALYTICS API HIT");
+    console.log("ANALYTICS API HIT");
     const leads = await Lead.find({ userId: req.user.id });
 
     console.log("LOGIN USER:", req.user.id);
     console.log("MATCHED LEADS:", leads);
-    
-
 
     const byStatus = await Lead.aggregate([
       { $match: { userId: leads[0]?.userId } },
@@ -137,7 +137,7 @@ router.get("/analytics", verifyUserToken, async (req, res) => {
     ]);
 
     const total = leads.length;
- 
+
     res.json({
       success: true,
       byStatus,
@@ -148,7 +148,36 @@ router.get("/analytics", verifyUserToken, async (req, res) => {
   }
 });
 
+router.get("/source", verifyUserToken, async (req, res) => {
+  try {
+    const leads = await Lead.find({ userId: req.user.id });
+    console.log("/login user", req.user.id);
+    console.log("MATCHED LEADS:", leads);
+    
+    const source = await Lead.aggregate([
+      { $match: { userId: leads[0]?.userId} },
+      {
+        $group: {
+          _id: "$source",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+    const total = leads.length;
 
+    res.json({
+      success: true,
+      source,
+      total,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+});
 
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
@@ -213,126 +242,6 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       success: false,
       message: "excel upload failed ",
       error: error.message,
-    });
-  }
-});
-
-router.post("/count", verifyUserToken, async (req, res) => {
-  try {
-    const totalLead = await Lead.countDocuments({ userId: req.user.id });
-    res.status(200).json({
-      success: true,
-      message: "lead count successfully",
-      totalLead,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      success: false,
-      message: "server error",
-      err: err.message,
-    });
-  }
-});
-
-router.post("/new", verifyUserToken, async (req, res) => {
-  try {
-    const newStatus = await Lead.countDocuments({
-      userId: req.user.id,
-      status: "New",
-    });
-    res.status(200).json({
-      success: true,
-      message: "lead count of status new",
-      newStatus,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      success: false,
-      message: "server error",
-      err: err.message,
-    });
-  }
-});
-
-router.post("/interested", verifyUserToken, async (req, res) => {
-  try {
-    const interested = await Lead.countDocuments({
-      userId: req.user.id,
-      status: "Interested",
-    });
-    res.status(200).json({
-      success: false,
-      message: "lead count of status interested",
-      interested,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      success: false,
-      message: "server error",
-    });
-  }
-});
-
-router.post("/contacted", verifyUserToken, async (req, res) => {
-  try {
-    const contacted = await Lead.countDocuments({
-      userId: req.user.id,
-      status: "Contacted",
-    });
-    res.status(200).json({
-      success: false,
-      message: "lead count of status contacted",
-      contacted,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      success: false,
-      message: "server error",
-    });
-  }
-});
-
-router.post("/won", verifyUserToken, async (req, res) => {
-  try {
-    const won = await Lead.countDocuments({
-      userId: req.user.id,
-      status: "Closed Won",
-    });
-    res.status(200).json({
-      success: false,
-      message: "lead count of status Closed Won",
-      won,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      success: false,
-      message: "server error",
-    });
-  }
-});
-
-router.post("/lost", verifyUserToken, async (req, res) => {
-  try {
-    const lost = await Lead.countDocuments({
-      userId: req.user.id,
-      status: "Closed Lost",
-    });
-    res.status(200).json({
-      success: false,
-      message: "lead count of status Lost",
-      lost,
-    });
-    //   console.log(lost)
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      success: false,
-      message: "server error",
     });
   }
 });
