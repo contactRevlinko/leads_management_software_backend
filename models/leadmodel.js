@@ -9,6 +9,11 @@ const leadSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    assignedTo:{
+      type:mongoose.Schema.Types.ObjectId,
+      ref:"Team",
+      required:true,
+    },
 
     name: { type: String, required: true },
     phone: { type: String, required: true },

@@ -13,7 +13,7 @@ router.post("/create-lead", verifyUserToken, async (req, res) => {
     console.log("REQ USER:", req.user);
     console.log("REQ BODY:", req.body);
 
-    const { name, email, phone, status, source, notes, followUpDate } =
+    const { name, email, phone, status, source, assignedTo, notes,  followUpDate } =
       req.body;
 
     const lead = await Lead.create({
@@ -24,6 +24,7 @@ router.post("/create-lead", verifyUserToken, async (req, res) => {
       phone,
       status,
       source,
+      assignedTo,
       notes,
       followUpDate,
     });
@@ -46,7 +47,7 @@ router.post("/get-leads", verifyUserToken, async (req, res) => {
   try {
     const leads = await Lead.find({ userId: req.user.id }).sort({
       createdAt: -1,
-    });
+    }).populate("assignedTo" , "name email role");
     res.status(200).json({
       success: true,
       message: "get all leads successfully",
@@ -246,7 +247,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-router.patch("/:id/status", async (req, res) => {
+router.patch("/:id/status", verifyUserToken, async (req, res) => {
   try {
     const { status } = req.body;
     const updatedLeadStatus = await Lead.findByIdAndUpdate(
@@ -268,5 +269,29 @@ router.patch("/:id/status", async (req, res) => {
     });
   }
 });
+router.put("/:id/assign-lead" , verifyUserToken , async(req,res) => {
+try{
+    const {assignedTo} = req.body ;
+  const lead =  await Lead.findOneAndUpdate({
+    _id:req.params.id,
+    userId:req.user.id,
+  },
+{
+  assignedTo:assignedTo || null,
+}, {new :true}).populate("assignedTo" , "name email role")
+ return res.json(200).json({
+  success:true,
+  message:"lead assigned successfully ",
+  data:lead,
+ })
 
+}catch(err){
+  console.log(err)
+  return res.status(500).json({
+    success:false,
+    message :"server error"+ " " + err.message
+  })
+}
+
+})
 module.exports = router;
