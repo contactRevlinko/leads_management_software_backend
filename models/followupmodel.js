@@ -11,6 +11,9 @@ const followupSchema = new mongoose.Schema({
     ref: "Lead",
     required: true,
   },
+  followupNo: {
+  type: Number,
+},
 
   followUpDate:{
     type:Date,

@@ -1,9 +1,11 @@
 const mongoose = require("mongoose");
-const teamSchema = new mongoose.Schema([
+
+const teamSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
     },
     name: {
       type: String,
@@ -16,10 +18,15 @@ const teamSchema = new mongoose.Schema([
       unique: true,
       trim: true,
     },
-    phone: {
+    phone1: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
+    },
+     phone2: {
+      type: String,
+    
       trim: true,
     },
     password: {
@@ -29,8 +36,10 @@ const teamSchema = new mongoose.Schema([
     role: {
       type: String,
       enum: ["Sales Person", "Junior Sales", "Executive"],
-      default: "Team",
+      default: "Sales Person",
     },
   },
-]);
+  { timestamps: true }
+);
+
 module.exports = mongoose.model("Team", teamSchema);

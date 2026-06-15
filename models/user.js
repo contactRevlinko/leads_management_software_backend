@@ -8,7 +8,8 @@ const mongoose = require("mongoose");
             type:String , required:true , trim:true
         },
        password:{type:String , required:true},
-
+       resetOtp: String,
+       resetOtpExpire: Date,
 
     }   ,  {timestamps:true})
 

@@ -7,27 +7,40 @@ const XLSX = require("xlsx");
 const Lead = require("../models/leadmodel");
 const upload = multer({ storage: multer.memoryStorage() });
 const verifyUserToken = require("../middleware/auth");
+const normalizePhone = require("../utils/phone");
+
 
 router.post("/create-lead", verifyUserToken, async (req, res) => {
   try {
     console.log("REQ USER:", req.user);
     console.log("REQ BODY:", req.body);
 
-    const { name, email, phone, status, source, assignedTo, notes,  followUpDate } =
-      req.body;
+    const { name, email, phone, status, source, assignedTo, notes, followUpDate } =
+  req.body;
 
-    const lead = await Lead.create({
-      ...req.body,
-      userId: req.user.id,
-      name,
-      email,
-      phone,
-      status,
-      source,
-      assignedTo,
-      notes,
-      followUpDate,
-    });
+  
+  const lastLead = await Lead.findOne({
+  userId: req.user.id,
+}).sort({ leadNo: -1 });
+
+console.log("Last Lead:", lastLead);
+
+const nextLeadNo = lastLead ? lastLead.leadNo + 1 : 1;
+
+console.log("Next Lead No:", nextLeadNo);
+
+const lead = await Lead.create({
+  userId: req.user.id,
+  leadNo: nextLeadNo,
+  name,
+  email,
+  phone: normalizePhone(phone),
+  status,
+  source,
+   assignedTo: assignedTo || null,
+  notes,
+  followUpDate,
+});  
 
     res.status(201).json({
       success: true,
@@ -80,24 +93,40 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
-  try {
-    const id = req.params.id;
-    // console.log(id, "lead id");
-    const response = await Lead.findByIdAndDelete(id);
+const Followup = require("../models/followupmodel");
 
-    // console.log(response, "response of delete api");
+router.delete("/:id", verifyUserToken, async (req, res) => {
+  try {
+    const leadId = req.params.id;
+
+    // delete all followups of this lead
+    await Followup.deleteMany({
+      leadId: leadId,
+    });
+
+    // delete lead
+    await Lead.findByIdAndDelete(leadId);
+
+   const leads = await Lead.find({ userId: req.user.id }).sort({
+      createdAt: 1,
+    });
+
+    for (let i = 0; i < leads.length; i++) {
+      leads[i].leadNo = i + 1;
+      await leads[i].save();
+    }
 
     res.status(200).json({
       success: true,
-      message: "lead successfully deleted ",
+      message: "Lead and related followups deleted successfully",
     });
   } catch (err) {
     res.status(500).json({
+      success: false,
       message: err.message,
     });
   }
-});
+}); 
 
 router.get("/reminders/today", async (req, res) => {
   try {
@@ -124,20 +153,18 @@ router.get("/reminders/today", async (req, res) => {
   }
 });
 
+const mongoose = require("mongoose");
+
 router.get("/analytics", verifyUserToken, async (req, res) => {
   try {
-    console.log("ANALYTICS API HIT");
-    const leads = await Lead.find({ userId: req.user.id });
-
-    console.log("LOGIN USER:", req.user.id);
-    console.log("MATCHED LEADS:", leads);
+    const userId = new mongoose.Types.ObjectId(req.user.id);
 
     const byStatus = await Lead.aggregate([
-      { $match: { userId: leads[0]?.userId } },
+      { $match: { userId } },
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
-    const total = leads.length;
+    const total = await Lead.countDocuments({ userId });
 
     res.json({
       success: true,
@@ -147,7 +174,9 @@ router.get("/analytics", verifyUserToken, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
-});
+});  
+
+
 
 router.get("/source", verifyUserToken, async (req, res) => {
   try {
@@ -180,45 +209,71 @@ router.get("/source", verifyUserToken, async (req, res) => {
   }
 });
 
-router.post("/upload", upload.single("file"), async (req, res) => {
+router.post("/upload", verifyUserToken, upload.single("file"), async (req, res) => {
   try {
     const workbook = XLSX.read(req.file.buffer, {
       type: "buffer",
+      cellDates: true,
     });
-    // console.log(workbook , "workbook")
-    const sheetName = workbook.SheetNames[0];
-    // console.log(sheetName , "sheetName ");
-    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-    //   console.log(sheetData , "sheetdata");
-    const leads = sheetData.map((row) => ({
-      name: row.name,
-      phone: row.phone,
-      email: row.email,
-      status: row.status || "New",
-      followUpDate:
-        row["follow up date"] && row["follow up date"] !== "no date"
-          ? new Date(row["follow up date"])
-          : null,
-    }));
 
-    // const phone = leads.map((lead) => lead.phone);
-    // const existingLead = await Lead.find({
-    //   phone: { $in: phone },
-    // });
-    // console.log(existingLead);
-    // const newLead = leads.filter((lead) => !existingLead.includes(lead.phone));
-    // console.log(newLead);
-    // const leadData = await Lead.insertMany(newLead);
+    const sheetName = workbook.SheetNames[0];
+    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+    const validSources = [
+      "Whatsapp",
+      "Instagram",
+      "Referral",
+      "Website",
+      "Facebook",
+      "Call",
+      "Email",
+      "Telegram",
+      "Friend",
+      "Other",
+    ];
+
+    const validStatus = [
+      "New",
+      "Hot",
+      "Warm",
+      "Cold",
+      "Contacted",
+      "Interested",
+      "Closed Won",
+      "Closed Lost",
+    ];
+
+    const leads = sheetData.map((row) => {
+      const sourceValue = row.source
+        ? String(row.source).trim()
+        : "Other";
+
+      const statusValue = row.status
+        ? String(row.status).trim()
+        : "New";
+
+      return {
+        userId: req.user.id,
+        name: row.name,
+        phone: String(row.phone || "").trim(),
+        email: row.email,
+        status: validStatus.includes(statusValue) ? statusValue : "New",
+        source: validSources.includes(sourceValue) ? sourceValue : "Other",
+        followUpDate: row.followUpDate ? new Date(row.followUpDate) : null,
+      };
+    });
 
     const phones = leads.map((lead) => lead.phone);
     const emails = leads.map((lead) => lead.email);
 
-    const Existinglead = await Lead.find({
+    const existingLead = await Lead.find({
+      userId: req.user.id,
       $or: [{ phone: { $in: phones } }, { email: { $in: emails } }],
     });
+
     const newLead = leads.filter((lead) => {
-      const duplicate = Existinglead.find(
-        (item) => item.phone === lead.phone || item.email === lead.email,
+      const duplicate = existingLead.find(
+        (item) => item.phone === lead.phone || item.email === lead.email
       );
 
       return !duplicate;
@@ -226,26 +281,31 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     if (newLead.length < 1) {
       return res.json({
-        message: "same data already exist . no new lead  uploaded",
+        success: true,
+        message: "same data already exist. no new lead uploaded",
       });
     }
+
     const duplicateCount = leads.length - newLead.length;
     const leadData = await Lead.insertMany(newLead);
 
     res.status(200).json({
       success: true,
-      message: `${leadData.length} leads uploaded ${duplicateCount} duplicate lead skipped `,
+      message: `${leadData.length} leads uploaded, ${duplicateCount} duplicate lead skipped`,
       data: leadData,
     });
   } catch (error) {
     console.log(error.message);
     res.status(500).json({
       success: false,
-      message: "excel upload failed ",
+      message: "excel upload failed",
       error: error.message,
     });
   }
 });
+
+
+
 
 router.patch("/:id/status", verifyUserToken, async (req, res) => {
   try {

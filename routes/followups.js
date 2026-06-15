@@ -3,10 +3,12 @@ const router = express.Router();
 
 const Followup = require("../models/followupmodel");
 const verifyUserToken = require("../middleware/auth")
-
+const normalizePhone = require("../utils/phone");
 
 router.post("/creat-followups", verifyUserToken, async (req, res) => {
   try {
+
+
     console.log(req.body, "req.body");
     const {
      userId,
@@ -18,8 +20,11 @@ router.post("/creat-followups", verifyUserToken, async (req, res) => {
       priority,
       nextFollowupDate,
     } = req.body;
+    const lastFollowup = await Followup.findOne({userId : req.user.id}).sort({followupNo : -1})
+    const nextFollowupNo = lastFollowup ? lastFollowup.followupNo + 1 : 1 ;
     const followup = await Followup.create({
       userId: req.user.id,
+      followupNo: nextFollowupNo,
       leadId: leadId,
       followUpDate: followUpDate,
       followUpTime: followUpTime,
@@ -48,19 +53,18 @@ router.post("/creat-followups", verifyUserToken, async (req, res) => {
   }
 });
 
-router.post("/get-followups",verifyUserToken, async (req, res) => {
+router.post("/get-followups", verifyUserToken, async (req, res) => {
   try {
-    const allFollowups = await Followup.find({userId : req.user.id})
+    const allFollowups = await Followup.find({ userId: req.user.id })
       .populate("leadId")
-      .sort({ followUpDate: 1 });
+      .sort({ createdAt: -1 });
+
     res.status(200).json({
       success: true,
       message: "get all followups successfully",
       data: allFollowups,
     });
-    console.log(allFollowups, "allFollowups");
   } catch (err) {
-    console.log(err);
     res.status(500).json({
       success: false,
       message: "server error",
@@ -110,55 +114,31 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-//wrong date comes from seerver because of time
-// router.get('/today' , async(req , res) => {
-//   try{
 
-//     const today = new Date();
-//     const start = new Date(today.setHours(0,0,0,0));
-//     const end = new Date(today.setHours(23,59,59,999));
-//    console.log("today : ", today , "start :", start , "end:" ,end )
-//     const followups = await Followup.find({
-//       followUpDate :  {$gte : start , $lte : end }
-//     }).populate("leadId")
-//       res.status(200).json({
-//         success:true,
-//         message: "todays followups get successfully",
-//         data : followups ,
-//       })
-//   }catch(err){
-//     console.log(err)
-//     res.status(500).json({
-//       success:false,
-//       message:"server error",
-//       err : err.message
-//     })
-//   }
 
-// })
-router.get("/today", async (req, res) => {
+router.get("/today", verifyUserToken, async (req, res) => {
   try {
-    // const today = new Date().toISOString().split("T")[0]; it will give tomorrows date 
-     const today = new Date().toLocaleDateString("en-CA");
+    const today = new Date().toLocaleDateString("en-CA");
 
-    const allFollowups = await Followup.find().populate("leadId");
+    const allFollowups = await Followup.find({
+      userId: req.user.id,
+    })
+      .populate("leadId")
+      .sort({ createdAt: -1 });
+
     const todaysFollowup = allFollowups.filter((item) => {
-      if(!item.followUpDate) return false;
-     const dbDate = item.followUpDate.toISOString().split("T")[0];
+      if (!item.followUpDate) return false;
 
-      // const dbDate = item.followUpDate.toLocaleDateString("en-CA");
-
-       console.log("today : ", today, "dbDate : ", dbDate);
+      const dbDate = item.followUpDate.toLocaleDateString("en-CA");
       return today === dbDate;
     });
-   
+
     res.status(200).json({
       success: true,
       message: "todays followups get successfully",
-      data: todaysFollowup ,
+      data: todaysFollowup,
     });
   } catch (err) {
-    console.log(err);
     res.status(500).json({
       success: false,
       message: "server error",
@@ -167,10 +147,25 @@ router.get("/today", async (req, res) => {
   }
 });
 
-router.delete('/delete/:id', async(req , res) => {
+
+
+router.delete('/delete/:id', verifyUserToken , async(req , res) => {
   try{
     const id = req.params.id
     const deletedFollowups = await Followup.findByIdAndDelete(id);
+
+     const followups = await Followup.find({
+      userId: req.user.id,
+    }).sort({
+      createdAt: -1,
+    });
+
+    for (let i = 0; i < followups.length; i++) {
+      followups[i].followupNo = i + 1;
+      await followups[i].save();
+    }
+
+
     res.status(200).json({
       success : true ,
       message : "followup deleted successfully "

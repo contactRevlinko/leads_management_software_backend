@@ -12,9 +12,12 @@ const leadSchema = new mongoose.Schema(
     assignedTo:{
       type:mongoose.Schema.Types.ObjectId,
       ref:"Team",
-      required:true,
+      default: null, 
     },
-
+  
+    leadNo: {
+  type: Number,
+},
     name: { type: String, required: true },
     phone: { type: String, required: true },
     email: { type: String },
@@ -53,8 +56,10 @@ const leadSchema = new mongoose.Schema(
       type: Date,
     },
     notes: { type: String },
-    assignedTo: { type: String },
+ 
   },
+
   { timestamps: true }, // createdAt and updatedAt document
 );
+leadSchema.index({ userId: 1, leadNo: 1 }, { unique: true }),
 module.exports = mongoose.model("Lead", leadSchema);
