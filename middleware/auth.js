@@ -27,4 +27,15 @@
     })
     }
     })
+
+const verifiedSuperAdmin = (req , res , next) => {
+    if(req.user.role !== "SUPER_ADMIN"){
+        return res.status(403).json({
+            success:false,
+            message:"Access denied , only super admin allowed "
+        })
+    }
+    next();
+}
+
 module.exports = verifyUserToken;

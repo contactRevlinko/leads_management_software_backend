@@ -35,7 +35,7 @@ app.use("/api/leads", require("./routes/leads.js"));
 app.use("/api/followups", require("./routes/followups.js"));
 app.use("/api/auth", require("./routes/auth.js"));
 app.use("/api/team" , require("./routes/team.js"));
-
+app.use("/api/super-admin" , require("./routes/superAdmin.js"));
 // Start server after DB connected
 const startServer = async () => {
   try {

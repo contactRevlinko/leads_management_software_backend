@@ -1,16 +1,57 @@
 const mongoose = require("mongoose");
 
-    const userSchema = new mongoose.Schema({
-        name :{type:String , required : true , trim:true},
-        email :{type:String , required : true , trim: true , unique:true},
-        phone :{type: String , required : true , trim : true , unique :true},
-        businessType : {
-            type:String , required:true , trim:true
-        },
-       password:{type:String , required:true},
-       resetOtp: String,
-       resetOtpExpire: Date,
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, trim: true, unique: true },
+    phone: { type: String, required: true, trim: true, unique: true },
+    businessType: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    password: { type: String, required: true },
 
-    }   ,  {timestamps:true})
+    businessAddress: { type: String, required: true },
 
-module.exports = mongoose.model("User" , userSchema);
+    razorpayCustomerId: {
+      type: String,
+      default: "",
+    },
+
+    razorpayOrderId: {
+      type: String,
+      default: "",
+    },
+
+    razorpayPaymentId: {
+      type: String,
+      default: "",
+    },
+
+    paymentVerified: {
+      type: Boolean,
+      defalt: false,
+    },
+    subscriptionStatus: {
+      type: String,
+      enum: ["acitve", "inactive", "expired"],
+      default: "inactive",
+    },
+
+    packageExpiryDate: {
+      type: Date,
+      default: null,
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    resetOtp: String,
+    resetOtpExpire: Date,
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.model("User", userSchema);

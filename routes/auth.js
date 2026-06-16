@@ -79,7 +79,7 @@ router.post("/login", async (req, res) => {
         businessType: existingUser.businessType,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "365d" },
+      { expiresIn: "3d" },
     );
     console.log("token", token);
     console.log(User);
