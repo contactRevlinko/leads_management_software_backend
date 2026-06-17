@@ -24,6 +24,7 @@ const verifySuperAdminToken = (req, res, next) => {
     }
 
     req.superAdmin = decoded;
+    console.log(req.superAdmin);
 
     next();
   } catch (err) {

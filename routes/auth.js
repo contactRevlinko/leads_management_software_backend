@@ -45,6 +45,7 @@ router.post("/register", async (req, res) => {
 });
 
 router.post("/login", async (req, res) => {
+ 
   try {
     const { name, email, phone, password, businessType } = req.body;
     const existingUser = await User.findOne({ email });
@@ -54,6 +55,13 @@ router.post("/login", async (req, res) => {
         message: "invalid eamil or password",
       });
     }
+
+     if (!existingUser.isActive) {
+  return res.status(403).json({
+    success: false,
+    message: "Your account is inactive. Contact super admin.",
+  })}
+
     const match = await bcrypt.compare(password, existingUser.password);
     console.log(
       "password",
@@ -282,5 +290,13 @@ router.post("/reset-password" , verifyUserToken , async(req, res) => {
       res.status(500).json({ success: false, message: err.message });
   }
 })
+
+router.get("/check-status", verifyUserToken, async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "User is active",
+    user: req.user,
+  });
+});
 
 module.exports = router;

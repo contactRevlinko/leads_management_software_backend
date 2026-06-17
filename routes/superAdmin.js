@@ -6,34 +6,84 @@ const SuperAdmin = require("../models/superAdminmodel");
 const verifyUserToken = require("../middleware/auth");
 const verifySuperAdminToken = require("../middleware/superAdminVerify");
 const bcrypt = require("bcryptjs");
+const User = require("../models/user")
+// admin (user)routes
+router.get("/admins" , verifySuperAdminToken,  async(req , res) => {
+ try{
+   const admins = await User.find().select("-password")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success:true,
+      message:"successfully fetch admins",
+      data:admins,
+
+    })
+ }
+ catch(err){
+  console.log(err)
+  return res.status(500).json({
+    success:false,
+    message:"failed to fetch admins"
+  })
+ }
+
+})
+router.put(
+  "/update-status/:id",
+  verifySuperAdminToken,
+  async (req, res) => {
+    try {
+      const admin = await User.findByIdAndUpdate(
+        req.params.id,
+        { isActive: req.body.isActive },
+        { new: true }
+      );
+
+      res.json({
+        success: true,
+        data: admin,
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: err.message,
+      });
+    }
+  }
+);
+
+//super admin routes
 
 router.post("/login-sa", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // static super admin login
-    if (email === "lms@superadmin.com" && password === "Lms@123") {
+    if (email === "lms@superadmin.com" && password === "Lms@12345") {
       const token = jwt.sign(
         {
           role: "SUPER_ADMIN",
           email: "lms@superadmin.com",
+          isMainAdmin: true,
         },
         process.env.JWT_SECRET,
         { expiresIn: "24h" }
       );
 
-      return res.status(200).json({
-        success: true,
-        message: "Static super admin login successfully",
-        token,
-        user: {
-          role: "SUPER_ADMIN",
-          email: "lms@superadmin.com",
-        },
-      });
+    return res.status(200).json({
+  success: true,
+  message: "Static super admin login successfully",
+  token,
+  superAdmin: {
+    name: "Static Super Admin",
+    email: "lms@superadmin.com",
+    phone: "-",
+    role: "Main Super Admin",
+    isMainAdmin: true,
+  },
+});
     }
 
-    // database super admin login
     const superAdmin = await SuperAdmin.findOne({ email });
 
     if (!superAdmin) {
@@ -57,25 +107,27 @@ router.post("/login-sa", async (req, res) => {
         id: superAdmin._id,
         role: superAdmin.role,
         email: superAdmin.email,
+        isMainAdmin: false,
       },
       process.env.JWT_SECRET,
       { expiresIn: "24h" }
     );
 
-    return res.status(200).json({
-      success: true,
-      message: "Super admin login successfully",
-      token,
-      user: {
-        id: superAdmin._id,
-        name: superAdmin.name,
-        email: superAdmin.email,
-        phone: superAdmin.phone,
-        role: superAdmin.role,
-      },
-    });
+ return res.status(200).json({
+  success: true,
+  message: "Login successfully",
+  token,
+  superAdmin: {
+    id: superAdmin._id,
+    name: superAdmin.name,
+    email: superAdmin.email,
+    phone: superAdmin.phone,
+    role: "Super Admin",
+    isMainAdmin: superAdmin.isMainAdmin,
+  },
+});
+
   } catch (err) {
-    console.log(err);
     return res.status(500).json({
       success: false,
       message: "server error " + err.message,
@@ -86,6 +138,15 @@ router.post("/login-sa", async (req, res) => {
 router.post(
   "/create-sa", verifySuperAdminToken,
   async (req, res) => {
+
+    if (!req.superAdmin.isMainAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Only Main Super Admin can create admins",
+      });
+    }
+
+    
     try {
       const { name, phone, email, password } = req.body;
       const existSuperAdmin = await SuperAdmin.findOne({
@@ -228,5 +289,40 @@ res.status(200).json({
   }
 } )
 
+router.delete("/admin/:id" , verifySuperAdminToken , async(req , res) => {
+  try{
+      const adminId = req.params.id;
+    const admin = await User.findById(adminId)
+    
 
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+const adminDelete = await User.findByIdAndDelete(adminId)
+return res.status(200).json({
+  success:true,
+  message:"admin deleted successfully by super admin",
+})
+  }
+  catch(err){
+    console.log(err)
+    return res.status(500).json({
+      success:flase,
+      messsage:"server error"
+    })
+  }
+} )
+router.get(
+  "/profile",
+  verifySuperAdminToken,
+  async (req, res) => {
+    return res.status(200).json({
+      success: true,
+      user: req.superAdmin,
+    });
+  }
+);
 module.exports = router;

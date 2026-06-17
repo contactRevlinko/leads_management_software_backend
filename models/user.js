@@ -12,7 +12,9 @@ const userSchema = new mongoose.Schema(
     },
     password: { type: String, required: true },
 
-    businessAddress: { type: String, required: true },
+    businessAddress: { type: String,
+      //  required: true
+       },
 
     razorpayCustomerId: {
       type: String,
@@ -31,7 +33,7 @@ const userSchema = new mongoose.Schema(
 
     paymentVerified: {
       type: Boolean,
-      defalt: false,
+      default: false,
     },
     subscriptionStatus: {
       type: String,
@@ -43,7 +45,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-
+    packageAssigned: {
+      type: String,
+      default: "",
+    },
     isActive: {
       type: Boolean,
       default: true,

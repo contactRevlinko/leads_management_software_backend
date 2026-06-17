@@ -1,5 +1,4 @@
 require("dotenv").config();
-
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
@@ -9,6 +8,7 @@ const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
   "http://localhost:5173",
+    "http://localhost:5174",
   "http://localhost:3000",
   "https://leads-management-software-frontend.vercel.app",
   process.env.FRONTEND_URL,
@@ -36,10 +36,14 @@ app.use("/api/followups", require("./routes/followups.js"));
 app.use("/api/auth", require("./routes/auth.js"));
 app.use("/api/team" , require("./routes/team.js"));
 app.use("/api/super-admin" , require("./routes/superAdmin.js"));
+app.use("/api/package" , require("./routes/package.js"));
+app.use("/api/payment" , require("./routes/payment.js"))
 // Start server after DB connected
 const startServer = async () => {
   try {
     await connectDB();
+  
+    
 
     app.listen(PORT, () => {
       console.log(`server running on port ${PORT}`);
