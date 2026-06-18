@@ -10,7 +10,7 @@ const { transporter } = require("../config/emailConfig");
 
 router.post("/register", async (req, res) => {
   try {
-    const { name, phone, email, businessType, password } = req.body;
+    const { name, phone, email, businessType, password , paymentVerified } = req.body;
     const existingUser = await User.findOne({ email });
     console.log("existingUser", existingUser);
     if (existingUser) {
@@ -20,13 +20,14 @@ router.post("/register", async (req, res) => {
       });
     }
     const hashPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      name,
-      phone: normalizePhone(phone),
-      email,
-      businessType,
-      password: hashPassword,
-    });
+   const user = await User.create({
+  name,
+  phone: normalizePhone(phone),
+  email,
+  businessType,
+  password: hashPassword,
+  paymentVerified: false,
+});
     res.status(201).json({
       success: true,
       message: "user created successfully",
@@ -61,6 +62,18 @@ router.post("/login", async (req, res) => {
     success: false,
     message: "Your account is inactive. Contact super admin.",
   })}
+  if (!existingUser.paymentVerified) {
+  return res.status(403).json({
+    success: false,
+    paymentRequired: true,
+    message: "Please complete payment first",
+    user: {
+      id: existingUser._id,
+      email: existingUser.email,
+    },
+  });
+}
+
 
     const match = await bcrypt.compare(password, existingUser.password);
     console.log(

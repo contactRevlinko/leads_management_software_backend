@@ -36,9 +36,9 @@ router.post("/create-package", verifySuperAdminToken, async (req, res) => {
   }
 });
 
-router.get("/all-package", verifySuperAdminToken, async (req, res) => {
+router.get("/all-package", async (req, res) => {
   try {
-    const getAllPackage = await Package.find().sort({ created: -1 });
+  const getAllPackage = await Package.find().sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -46,7 +46,7 @@ router.get("/all-package", verifySuperAdminToken, async (req, res) => {
       data: getAllPackage,
     });
   } catch (err) {
-    cosole.log(err);
+    console.log(err);
     return res.status(500).json({
       success: false,
       message: "server error",
@@ -84,21 +84,21 @@ router.put("/update-package/:id", verifySuperAdminToken, async (req, res) => {
 
 router.patch("/toggle-package/:id", verifySuperAdminToken, async (req, res) => {
   try {
-    const package = await Package.findById(req.params.id);
+    const packageData = await Package.findById(req.params.id);
 
-    if (!package) {
+    if (!packageData) {
       return res.status(500).json({
         success: false,
         message: "package not found",
       });
     }
-    package.isActive = !package.isActive;
-    await package.save();
+    packageData.isActive = !packageData.isActive;
+    await packageData.save();
 
     return res.status(200).json({
         success:true,
         message:"package status updated",
-        data:package,
+        data:packageData,
     })
   } catch (err) {
     console.log(err);

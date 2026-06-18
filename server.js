@@ -38,6 +38,7 @@ app.use("/api/team" , require("./routes/team.js"));
 app.use("/api/super-admin" , require("./routes/superAdmin.js"));
 app.use("/api/package" , require("./routes/package.js"));
 app.use("/api/payment" , require("./routes/payment.js"))
+app.use("/api/razorpay-setting", require("./routes/razorpaySettingRoute"));
 // Start server after DB connected
 const startServer = async () => {
   try {
