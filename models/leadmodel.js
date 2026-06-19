@@ -37,19 +37,7 @@ const leadSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: [
-        "Whatsapp",
-        "Instagram",
-        "Referral",
-        "Website",
-        "Facebook",
-        "Call",
-        "Email",
-        "Telegram",
-        "Other",
-        "Friend",
-        "Campaign",
-      ],
+     
       default: "other",
     },
     followUpDate: {

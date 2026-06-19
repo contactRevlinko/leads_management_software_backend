@@ -1,6 +1,8 @@
 require("dotenv").config();
+
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
+const Team = require("../models/teamModel");
 
 const verifyUserToken = async (req, res, next) => {
   try {
@@ -15,32 +17,65 @@ const verifyUserToken = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(decoded.id).select("-password");
+    // ADMIN LOGIN
+    if (decoded.loginType === "admin") {
+      const user = await User.findById(decoded.id).select("-password");
 
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "User not found",
-      });
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      if (!user.isActive) {
+        return res.status(403).json({
+          success: false,
+          message: "Your account is inactive",
+        });
+      }
+
+      req.user = {
+        id: user._id,
+        loginType: "admin",
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        businessType: user.businessType,
+      };
+
+      return next();
     }
 
-    if (!user.isActive) {
-      return res.status(403).json({
-        success: false,
-        message: "Your account is inactive",
-      });
+    // TEAM LOGIN
+    if (decoded.loginType === "team") {
+      const member = await Team.findById(decoded.id).select("-password");
+
+      if (!member) {
+        return res.status(401).json({
+          success: false,
+          message: "Team member not found",
+        });
+      }
+
+      req.user = {
+        id: member.userId,      // admin user id
+        teamId: member._id,    // team member id
+        loginType: "team",
+        role: member.role,
+        name: member.name,
+        email: member.email,
+        phone1: member.phone1,
+        phone2: member.phone2,
+      };
+
+      return next();
     }
-   
 
-    req.user = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      businessType: user.businessType,
-    };
-
-    next();
+    return res.status(401).json({
+      success: false,
+      message: "Invalid login type",
+    });
   } catch (err) {
     return res.status(401).json({
       success: false,
@@ -49,16 +84,5 @@ const verifyUserToken = async (req, res, next) => {
     });
   }
 };
-
-
-const verifiedSuperAdmin = (req , res , next) => {
-    if(req.user.role !== "SUPER_ADMIN"){
-        return res.status(403).json({
-            success:false,
-            message:"Access denied , only super admin allowed "
-        })
-    }
-    next();
-}
 
 module.exports = verifyUserToken;

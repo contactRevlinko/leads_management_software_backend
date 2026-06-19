@@ -7,6 +7,7 @@ const bcrypt = require("bcrypt");
 const verifyUserToken = require("../middleware/auth");
 const normalizePhone = require("../utils/phone");
 const { transporter } = require("../config/emailConfig");
+const Source = require("../models/sourcemodel");
 
 router.post("/register", async (req, res) => {
   try {
@@ -28,6 +29,25 @@ router.post("/register", async (req, res) => {
   password: hashPassword,
   paymentVerified: false,
 });
+
+await Source.insertMany([
+  {
+    userId: user._id,
+    name: "Reference",
+    description: "default",
+  },
+  {
+    userId: user._id,
+    name: "Instagram",
+    description: "default",
+  },
+  {
+    userId: user._id,
+    name: "WhatsApp",
+    description: "default",
+  },
+]);
+
     res.status(201).json({
       success: true,
       message: "user created successfully",
@@ -46,70 +66,69 @@ router.post("/register", async (req, res) => {
 });
 
 router.post("/login", async (req, res) => {
- 
   try {
-    const { name, email, phone, password, businessType } = req.body;
+    const { email, password } = req.body;
+
     const existingUser = await User.findOne({ email });
+
     if (!existingUser) {
       return res.status(401).json({
         success: false,
-        message: "invalid eamil or password",
+        message: "invalid email or password",
       });
     }
 
-     if (!existingUser.isActive) {
-  return res.status(403).json({
-    success: false,
-    message: "Your account is inactive. Contact super admin.",
-  })}
-  if (!existingUser.paymentVerified) {
-  return res.status(403).json({
-    success: false,
-    paymentRequired: true,
-    message: "Please complete payment first",
-    user: {
-      id: existingUser._id,
-      email: existingUser.email,
-    },
-  });
-}
-
-
     const match = await bcrypt.compare(password, existingUser.password);
-    console.log(
-      "password",
-      password,
-      "existingUser.password",
-      existingUser.password,
-    );
 
-    console.log(match);
     if (!match) {
       return res.status(401).json({
         success: false,
-        message: "invalid eamil or password",
+        message: "invalid email or password",
+      });
+    }
+
+    if (!existingUser.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is inactive. Contact super admin.",
+      });
+    }
+
+    if (!existingUser.paymentVerified) {
+      return res.status(403).json({
+        success: false,
+        paymentRequired: true,
+        message: "Please complete payment first",
+        user: {
+          _id: existingUser._id,
+          name: existingUser.name,
+          email: existingUser.email,
+          phone: existingUser.phone,
+          businessType: existingUser.businessType,
+        },
       });
     }
 
     const token = jwt.sign(
       {
         id: existingUser._id,
+        loginType: "admin",
         name: existingUser.name,
         email: existingUser.email,
         phone: existingUser.phone,
         businessType: existingUser.businessType,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "3d" },
+      { expiresIn: "3d" }
     );
-    console.log("token", token);
-    console.log(User);
+
     return res.status(200).json({
       success: true,
       message: "user loggedin successfully",
-      token: token,
+      token,
       user: {
-        id: existingUser._id,
+        _id: existingUser._id,
+        loginType: "admin",
         name: existingUser.name,
         email: existingUser.email,
         phone: existingUser.phone,
@@ -117,7 +136,6 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (err) {
-    console.log(err);
     res.status(500).json({
       success: false,
       message: "server error",

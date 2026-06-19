@@ -10,6 +10,8 @@ const allowedOrigins = [
   "http://localhost:5173",
     "http://localhost:5174",
   "http://localhost:3000",
+   "http://localhost:5175",
+   "http://localhost:5176",
   "https://leads-management-software-frontend.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
@@ -39,6 +41,7 @@ app.use("/api/super-admin" , require("./routes/superAdmin.js"));
 app.use("/api/package" , require("./routes/package.js"));
 app.use("/api/payment" , require("./routes/payment.js"))
 app.use("/api/razorpay-setting", require("./routes/razorpaySettingRoute"));
+app.use("/api/source" , require("./routes/source.js"));
 // Start server after DB connected
 const startServer = async () => {
   try {

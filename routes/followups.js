@@ -5,7 +5,7 @@ const Followup = require("../models/followupmodel");
 const verifyUserToken = require("../middleware/auth")
 const normalizePhone = require("../utils/phone");
 
-router.post("/creat-followups", verifyUserToken, async (req, res) => {
+router.post("/create-followups", verifyUserToken, async (req, res) => {
   try {
 
 
@@ -53,22 +53,49 @@ router.post("/creat-followups", verifyUserToken, async (req, res) => {
   }
 });
 
+
+
+
 router.post("/get-followups", verifyUserToken, async (req, res) => {
   try {
-    const allFollowups = await Followup.find({ userId: req.user.id })
+    const allFollowups = await Followup.find({})
       .populate("leadId")
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    let filteredFollowups = [];
+
+    if (req.user.loginType === "team") {
+      console.log("TEAM ID:", req.user.teamId);
+
+      filteredFollowups = allFollowups.filter((item) => {
+        const assignedTo = item.leadId?.assignedTo;
+
+        console.log("AssignedTo:", assignedTo);
+        console.log("TeamId:", req.user.teamId);
+
+        return (
+          assignedTo &&
+          String(assignedTo) === String(req.user.teamId)
+        );
+      });
+
+    } else {
+      filteredFollowups = allFollowups.filter(
+        (item) => String(item.userId) === String(req.user.id)
+      );
+    }
+
+    console.log("FINAL COUNT:", filteredFollowups.length);
+
+    return res.json({
       success: true,
-      message: "get all followups successfully",
-      data: allFollowups,
+      data: filteredFollowups,
     });
+
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "server error",
-      err: err.message,
+      message: err.message,
     });
   }
 });
@@ -115,38 +142,85 @@ router.put("/:id", async (req, res) => {
 });
 
 
-
 router.get("/today", verifyUserToken, async (req, res) => {
   try {
-    const today = new Date().toLocaleDateString("en-CA");
+    console.log(" LOGIN USER:", req.user);
 
-    const allFollowups = await Followup.find({
-      userId: req.user.id,
-    })
+    const today = new Date().toLocaleDateString("en-CA");
+    console.log(" TODAY:", today);
+
+    const allFollowups = await Followup.find({})
       .populate("leadId")
       .sort({ createdAt: -1 });
 
-    const todaysFollowup = allFollowups.filter((item) => {
-      if (!item.followUpDate) return false;
+    console.log("TOTAL FOLLOWUPS:", allFollowups.length);
 
-      const dbDate = item.followUpDate.toLocaleDateString("en-CA");
-      return today === dbDate;
-    });
+    let filtered = [];
 
-    res.status(200).json({
+   
+    if (req.user.loginType === "team") {
+      console.log(" TEAM LOGIN DETECTED");
+
+      filtered = allFollowups.filter((item) => {
+        const lead = item.leadId;
+        const assignedTo = lead?.assignedTo;
+
+        const isToday =
+          item.followUpDate &&
+          new Date(item.followUpDate).toLocaleDateString("en-CA") === today;
+
+        const isAssigned =
+          assignedTo &&
+          String(assignedTo) === String(req.user.teamId);
+
+        console.log("---- CHECK ----");
+        console.log("Followup ID:", item._id);
+        console.log("AssignedTo:", assignedTo);
+        console.log("TeamId:", req.user.teamId);
+        console.log("IsToday:", isToday);
+        console.log("IsAssigned:", isAssigned);
+
+        return isToday && isAssigned;
+      });
+    }
+
+    else {
+      console.log(" ADMIN LOGIN DETECTED");
+
+      filtered = allFollowups.filter((item) => {
+        const isToday =
+          item.followUpDate &&
+          new Date(item.followUpDate).toLocaleDateString("en-CA") === today;
+
+        const isOwner =
+          String(item.userId) === String(req.user.id);
+
+        console.log("---- ADMIN CHECK ----");
+        console.log("Followup ID:", item._id);
+        console.log("IsToday:", isToday);
+        console.log("IsOwner:", isOwner);
+
+        return isToday && isOwner;
+      });
+    }
+
+    console.log(" FINAL TODAY COUNT:", filtered.length);
+
+    return res.status(200).json({
       success: true,
-      message: "todays followups get successfully",
-      data: todaysFollowup,
+      message: "today followups fetched successfully",
+      data: filtered,
     });
+
   } catch (err) {
-    res.status(500).json({
+    console.log(" ERROR:", err);
+    return res.status(500).json({
       success: false,
       message: "server error",
       err: err.message,
     });
   }
 });
-
 
 
 router.delete('/delete/:id', verifyUserToken , async(req , res) => {

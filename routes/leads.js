@@ -1,5 +1,6 @@
 // api routes
-
+const Followup = require("../models/followupmodel");
+const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -58,12 +59,28 @@ const lead = await Lead.create({
 
 router.post("/get-leads", verifyUserToken, async (req, res) => {
   try {
-    const leads = await Lead.find({ userId: req.user.id }).sort({
-      createdAt: -1,
-    }).populate("assignedTo" , "name email role");
+    let filter;
+
+    if (req.user.loginType === "team") {
+      filter = {
+        userId: req.user.id,        // admin id
+        assignedTo: req.user.teamId // team member id
+      };
+    } else {
+      filter = {
+        userId: req.user.id,
+      };
+    }
+
+    console.log("REQ USER:", req.user);
+    console.log("LEAD FILTER:", filter);
+
+    const leads = await Lead.find(filter)
+      .sort({ createdAt: -1 })
+      .populate("assignedTo", "name email role");
+
     res.status(200).json({
       success: true,
-      message: "get all leads successfully",
       data: leads,
     });
   } catch (err) {
@@ -93,7 +110,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-const Followup = require("../models/followupmodel");
+
 
 router.delete("/:id", verifyUserToken, async (req, res) => {
   try {
@@ -153,7 +170,7 @@ router.get("/reminders/today", async (req, res) => {
   }
 });
 
-const mongoose = require("mongoose");
+
 
 router.get("/analytics", verifyUserToken, async (req, res) => {
   try {
@@ -354,4 +371,6 @@ try{
 }
 
 })
+
+
 module.exports = router;
