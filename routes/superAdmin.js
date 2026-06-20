@@ -8,10 +8,27 @@ const verifySuperAdminToken = require("../middleware/superAdminVerify");
 const bcrypt = require("bcryptjs");
 const User = require("../models/user")
 // admin (user)routes
+const Payment = require("../models/paymentModel");
+
 router.get("/admins" , verifySuperAdminToken,  async(req , res) => {
  try{
-   const admins = await User.find().select("-password")
+
+const {startDate , endDate} = req.query ;
+
+let filter = {};
+if (startDate && endDate) {
+  filter.createdAt = {
+    $gte: new Date(startDate),
+    $lte: new Date(endDate),
+  };
+}
+
+    const admins = await User.find(filter)
+      .select("-password")
       .sort({ createdAt: -1 });
+
+
+ 
 
     return res.status(200).json({
       success:true,
@@ -29,6 +46,28 @@ router.get("/admins" , verifySuperAdminToken,  async(req , res) => {
  }
 
 })
+
+router.get("/total-amount", verifySuperAdminToken, async (req, res) => {
+  try {
+    const payments = await Payment.find({ paymentVerified: true });
+
+    const totalAmount = payments.reduce((sum, p) => {
+      return sum + (p.packagePrice || 0);
+    }, 0);
+
+    res.json({
+      success: true,
+      totalAmount,
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+});
+
 router.put(
   "/update-status/:id",
   verifySuperAdminToken,
@@ -289,11 +328,11 @@ res.status(200).json({
   }
 } )
 
-router.delete("/admin/:id" , verifySuperAdminToken , async(req , res) => {
-  try{
-      const adminId = req.params.id;
-    const admin = await User.findById(adminId)
-    
+router.delete("/admin/:id", verifySuperAdminToken, async (req, res) => {
+  try {
+    const adminId = req.params.id;
+
+    const admin = await User.findById(adminId);
 
     if (!admin) {
       return res.status(404).json({
@@ -301,20 +340,25 @@ router.delete("/admin/:id" , verifySuperAdminToken , async(req , res) => {
         message: "Admin not found",
       });
     }
-const adminDelete = await User.findByIdAndDelete(adminId)
-return res.status(200).json({
-  success:true,
-  message:"admin deleted successfully by super admin",
-})
-  }
-  catch(err){
-    console.log(err)
+
+    //  STEP ADD THIS (DELETE PAYMENTS FIRST)
+    await Payment.deleteMany({ adminId: adminId });
+
+    // THEN DELETE USER
+    await User.findByIdAndDelete(adminId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin and payment history deleted successfully",
+    });
+  } catch (err) {
     return res.status(500).json({
-      success:flase,
-      messsage:"server error"
-    })
+      success: false,
+      message: err.message,
+    });
   }
-} )
+});
+
 router.get(
   "/profile",
   verifySuperAdminToken,
