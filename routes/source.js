@@ -48,17 +48,23 @@ const existingSource = await Source.findOne({
 
 router.get("/all", verifyUserToken, async (req, res) => {
   try {
+    const defaultSources = [
+      "Instagram",
+      "WhatsApp",
+      "Referral",
+    ];
+
     let sources = await Source.find({ userId: req.user.id }).sort({
       createdAt: -1,
     });
 
-    
-    if (sources.length === 0) {
-      await Source.insertMany([
-        { userId: req.user.id, name: "Reference" },
-        { userId: req.user.id, name: "Instagram" },
-        { userId: req.user.id, name: "WhatsApp" },
-      ]);
+      if (sources.length === 0) {
+      const newSources = defaultSources.map((name) => ({
+        userId: req.user.id,
+        name,
+      }));
+
+      await Source.insertMany(newSources);
 
       sources = await Source.find({ userId: req.user.id }).sort({
         createdAt: -1,
@@ -67,7 +73,6 @@ router.get("/all", verifyUserToken, async (req, res) => {
 
     return res.json({
       success: true,
-      message: "get all source successfully",
       data: sources,
     });
 
@@ -75,7 +80,7 @@ router.get("/all", verifyUserToken, async (req, res) => {
     console.log(err);
     return res.status(500).json({
       success: false,
-      message: "server error to get source",
+      message: "server error",
     });
   }
 });
