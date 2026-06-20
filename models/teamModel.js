@@ -18,12 +18,13 @@ const teamSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
-    phone1: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
+phone1: {
+  type: String,
+  required: true,
+  unique: true,
+  sparse: true,
+  trim: true
+},
      phone2: {
       type: String,
     

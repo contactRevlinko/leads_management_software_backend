@@ -13,6 +13,7 @@ const allowedOrigins = [
    "http://localhost:5175",
    "http://localhost:5176",
   "https://leads-management-software-frontend.vercel.app",
+    "https://lead-management-software-super-admi.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
