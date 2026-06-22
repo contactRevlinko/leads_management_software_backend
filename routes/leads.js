@@ -304,6 +304,16 @@ router.post("/upload", verifyUserToken, upload.single("file"), async (req, res) 
     }
 
     const duplicateCount = leads.length - newLead.length;
+
+    // Get the last leadNo for this user to auto-increment
+    const lastLead = await Lead.findOne({ userId: req.user.id }).sort({ leadNo: -1 });
+    let nextLeadNo = lastLead && lastLead.leadNo ? lastLead.leadNo + 1 : 1;
+
+    // Assign leadNo to each new lead
+    newLead.forEach((lead) => {
+      lead.leadNo = nextLeadNo++;
+    });
+
     const leadData = await Lead.insertMany(newLead);
 
     res.status(200).json({

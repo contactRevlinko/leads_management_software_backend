@@ -36,7 +36,6 @@ phone1: {
     },
     role: {
       type: String,
-      enum: ["Sales Person", "Junior Sales", "Executive"],
       default: "Sales Person",
     },
   },
